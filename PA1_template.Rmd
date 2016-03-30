@@ -1,9 +1,11 @@
 ---
-title: 'Reproducible Research: Peer Assessment 1'
-author: "plschoon"
-date: "March 26, 2016"
-output:html_document
-keep_md: yes
+title: "Reproducible Research: Peer Assessment 1"
+author: "Petra L. Schoon"
+date: "30 March 2016"
+output: 
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
 ---
 
 ## Introduction
@@ -19,7 +21,7 @@ The goal of this assignment is to write a single R Markdown file, which is proce
 
 The following code loads the dataset into r from a previously set working directory containing the dataset file. 
 ```{r}
-data <- read.csv("activity.csv")
+data <- read.csv("activity.csv", sep=",")
 ```
 
 The following preparations are performed so that the dataset can be easily handled for the assignment:
@@ -162,7 +164,7 @@ steps_new <- activity_new %>%
 steps_new
 
 hist(steps_new$steps_sum, main="total number of steps per day - new dataset", 
-xlab="steps per day", ylab="frequency")
+     xlab="steps per day", ylab="frequency")
 ```
 
 Also, we will calculate the mean and median of the total number of steps taken per day from the new dataset:
