@@ -1,0 +1,222 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+author: "Petra L. Schoon"
+date: "30 March 2016"
+output: 
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
+---
+## Introduction
+
+This document presents the results of the first project assignment of the Coursera Course *Reproducible Research*, which is part of the Data Science specialisation offered by John Hopkins University.  
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals throughout the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+The goal of this assignment is to write a single R Markdown file, which is processed by Knitr and transformed to an HTML file. 
+
+
+## Loading and preprocessing the data
+
+The following code loads the dataset into r from a previously set working directory containing the dataset file. 
+```{r}
+data <- read.csv("activity.csv", sep=",")
+```
+
+The following preparations are performed so that the dataset can be easily handled for the assignment:
+
+#### 1. loading necesarry r work packages (lubridate, dplyr, ggplot2, knitr)
+```{r, echo=TRUE, results="hide"}
+if (!require("lubridate")) {
+      install.packages("lubridate", repos="http://cran.rstudio.com/")
+}
+require("lubridate")
+
+if (!require("dplyr")) {
+      install.packages("dplyr", repos="http://cran.rstudio.com/")
+}
+require("dplyr")
+
+if (!require("ggplot2")) {
+      install.packages("ggplot2", repos="http://cran.rstudio.com/")
+}
+require("ggplot2")
+
+if (!require("knitr")) {
+      install.packages("knitr", repos="http://cran.rstudio.com/")
+}
+require("knitr")
+```
+
+
+#### 2. Taking a peak at the data:
+```{r}
+head(data)
+summary(data)
+```
+
+
+#### 3. Parsing the date into a POSIXct object using lubridate
+```{r}
+data$date <- ymd(data$date)
+```
+
+
+#### 4. Converting dataset into a tbl-dataframe for manipulation of the data using dplyr
+```{r}
+activity <- tbl_df(data)
+```
+
+
+Now we can start to take a closer look at the data!
+
+
+
+## What is the mean total number of steps taken per day?
+
+This part of the assignment consists of 3 parts, in which missing values in the dataset are ignored.
+
+
+#### Part 1. Calculate the total number of steps taken per day:
+
+```{r}
+steps <- activity %>% 
+      select(steps, date) %>%
+      group_by(date) %>%
+      summarize(steps_sum = sum(steps))
+steps
+```
+
+
+#### Part 2. Creating a histogram that shows the total number of steps taken per day:
+
+```{r}
+hist(steps$steps_sum, main="Total number of steps per day", xlab="steps per day", ylab="frequency")
+```
+
+#### Part 3. Calculate the mean and median of the toal number of steps taken per day:
+
+```{r}
+steps_mean <- mean(steps$steps_sum, na.rm=TRUE)
+steps_mean                  
+
+steps_median <- median(steps$steps_sum, na.rm=TRUE)
+steps_median
+```
+
+
+
+## What is the average daily activity pattern?
+
+In this part of the assignment a time series plot is made of the 5-minute interval and the average number of steps taken, averaged across all days.  
+
+```{r}
+Int <- data %>%
+      filter(!is.na(steps)) %>%
+      group_by(interval) %>%
+      summarize(steps = mean(steps))
+
+plot(Int$interval, Int$steps, type="l", main="Average daily activity", xlab="interval", ylab="steps")
+```
+
+
+**Question:** Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+**Answer:**  Interval 835 contains the maximum number of steps with an average total of 206 steps. See code below:
+```{r}
+Int[which.max(Int$steps),]
+```
+
+
+
+## Imputting missing values
+
+There are a number of days/intervals where there are missing values (shown as NA). The presence of these missing values may introduce bias into some of the calculations or summaries of the data. 
+
+We first would like to know the total number of missing values in the dataset.
+
+```{r}
+sum(is.na(data$steps))
+sum(is.na(data))
+```
+
+This means that there are 2304 missing values in the dataset, which are all contained within the *steps* variable.  
+
+
+Now we will fill all the missing values in the dataset. We will create a new dataset that is equal to the original dataset, but with the missing values replaced by the mean of the 5-minute interval:
+```{r}
+activity_new <- data
+NAs <- is.na(activity_new$steps)
+meanInt <- tapply(activity_new$steps, activity_new$interval, mean, na.rm=TRUE)
+activity_new$steps[NAs] <- meanInt[as.character(activity_new$interval[NAs])]
+
+sum(is.na(activity_new$steps))         
+```
+
+As shown above, this new dataset does not contain any missing values.
+Now let's have a closer look at this new dataset and compare it with our original dataset. We will repeat the steps we did before by calculating the total number of steps per day and plotting these results in a histogram: 
+
+```{r}
+steps_new <- activity_new %>% 
+      select(steps, date) %>%
+      group_by(date) %>%
+      summarize(steps_sum = sum(steps))
+steps_new
+
+hist(steps_new$steps_sum, main="total number of steps per day - new dataset", 
+     xlab="steps per day", ylab="frequency")
+```
+
+Also, we will calculate the mean and median of the total number of steps taken per day from the new dataset:
+```{r}
+steps_new_mean <- mean(steps_new$steps_sum)
+print(steps_new_mean)                   
+
+steps_new_median <- median(steps_new$steps_sum)
+print(steps_new_median)
+```
+
+**Questions:** Do these values differ from the estimates from the first part of the assignment? What is the impact of imputting missing data on the estimates of the total daily number of steps?
+**Answer:** Imputting the missing values into the dataset only creates a slight difference into the mean (10766 in the old vs 10766 steps per day in the new dataset) and median (10765 in the old vs 10766 steps per day in the new dataset) values. Thus, only the median seems to be affected, and by replacing the missing values by the mean of the 5-minute interval, the mean and median are now equal.  
+
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+#### Part 1. This code creates a new factor variable in the dataset with the 2 levels indicating whether a given date is a *weekday* or a *weekend* day:
+ 
+```{r}
+daytype <- function(dates) {
+      x <- function(date) {
+            if(weekdays(date) %in% c("lördag", "söndag")) {     ##  note that the days are denoted in Swedish
+                  "weekend"
+            }
+            else {
+                  "weekday"
+            }
+      }
+      sapply(dates, x)
+}
+
+activity_new$daytype <- as.factor(daytype(activity_new$date))
+str(activity_new)
+head(activity_new)
+```
+
+
+#### Part 2. This code creates a panel plot containing a time series plot of the 5-minute interval and the average number of steps taken, averaged across all weekdays or weekend days. 
+ 
+```{r}
+Int2 <-activity_new %>%
+      group_by(interval, daytype) %>%
+      summarize(steps = mean(steps))
+
+plot <- ggplot(Int2, aes(x=interval, y=steps, colour=daytype)) +
+      geom_line() +
+      facet_wrap(~daytype, ncol=1, nrow=2) +
+      labs(title = expression("weekday vs weekend activity patterns")) +
+      labs(x = "interval", y = expression("steps"))
+print(plot)
+```
+
+
+From these two plots we can conclude that the anonymous individual is mainly active in the morning. This is especially so during weekdays compared to the weekend days. During weekend days the activity is more divided throughout the day.
