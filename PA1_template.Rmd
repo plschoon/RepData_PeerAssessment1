@@ -161,7 +161,8 @@ steps_new <- activity_new %>%
       summarize(steps_sum = sum(steps))
 steps_new
 
-hist(steps_new$steps_sum, main="total number of steps per day - new dataset", xlab="steps per day", ylab="frequency")
+hist(steps_new$steps_sum, main="total number of steps per day - new dataset", 
+xlab="steps per day", ylab="frequency")
 ```
 
 Also, we will calculate the mean and median of the total number of steps taken per day from the new dataset:
