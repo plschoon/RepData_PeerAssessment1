@@ -2,8 +2,6 @@
 Petra L. Schoon  
 30 March 2016  
 
-# Reproducible Data: Peer-Assessment 1
-
 ## Introduction
 
 This document presents the results of the first project assignment of the Coursera Course *Reproducible Research*, which is part of the Data Science specialisation offered by John Hopkins University.  
